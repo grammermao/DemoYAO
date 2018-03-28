@@ -13,6 +13,7 @@
 @interface MM_TableViewController ()
 @property(nonatomic ,strong) NSDictionary *data;
 @property(nonatomic ,strong) NSMutableArray *dataArr;
+@property(nonatomic,strong) NSMutableArray *heightArr;
 @property(nonatomic ,strong) NSOperationQueue *queue;
 
 @end
@@ -22,9 +23,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    [self.tableView registerNib:[UINib nibWithNibName:@"MM_ListTableViewCell" bundle:nil] forCellReuseIdentifier:@"cellID"];
-    self.tableView.estimatedRowHeight = 116.5f;
-    self.tableView.rowHeight = UITableViewAutomaticDimension;
+//    [self.tableView registerNib:[UINib nibWithNibName:@"MM_ListTableViewCell" bundle:nil] forCellReuseIdentifier:@"cellID"];
+//    self.tableView.estimatedRowHeight = 200.0f;
+//    self.tableView.rowHeight = UITableViewAutomaticDimension;
     
     [self loadData];
 }
@@ -46,12 +47,44 @@
         MM_ListModel *model = [[MM_ListModel alloc]initWithDictionry:data[i]];
         [self.dataArr addObject:model];
     }
-    [self.tableView reloadData];
+    [self setupHeight];
 }
+-(void)setupHeight{
+    self.heightArr = [[NSMutableArray alloc]init];
+    
+    for (int i = 0; i<self.dataArr.count; i++) {
+        MM_ListModel *model = self.dataArr[i];;
+        
+        dispatch_async(dispatch_get_global_queue(0, 0), ^{
+            NSData *data=[NSData dataWithContentsOfURL:[NSURL URLWithString:model.imageHref]];
+            CGSize imageSize=[UIImage imageWithData:data].size;
+            CGFloat scanl =  imageSize.width/80.0;
+            if (scanl != 0) {
+                CGFloat height = imageSize.height /scanl;
+                height += 22;
+                CGFloat height_desctext = [self heightForText:model.desc FontSize:14].size.height;
+                CGFloat height_titletext = [self heightForText:model.title FontSize:16].size.height;
+                CGFloat height_text = height_desctext+height_titletext+30;
+                if (height>height_text) {
+                    model.height = height;
+                }else{
+                    model.height = height_text;
+                }
 
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+            }else{
+                CGFloat height_desctext = [self heightForText:model.desc FontSize:14].size.height;
+                CGFloat height_titletext = [self heightForText:model.title FontSize:16].size.height;
+                CGFloat height_text = height_desctext+height_titletext+35;
+                model.height = height_text;
+            }
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.tableView reloadData];
+            });
+            
+        });
+    }
+
 }
 
 #pragma mark - Table view data source
@@ -67,34 +100,19 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    MM_ListTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cellID" forIndexPath:indexPath];
+    MM_ListTableViewCell *cell = [[NSBundle mainBundle]loadNibNamed:@"MM_ListTableViewCell" owner:nil options:nil].lastObject;
     MM_ListModel *model = self.dataArr[indexPath.row];
     cell.title.text = model.title;
     cell.titleDesc.text = model.desc;
-    
-    
-    ///图片懒加载方法一：用SDWebImage（有点大材小用）我也常用的是SD
-//    [cell.imageV sd_setImageWithURL:[NSURL URLWithString:model.imageHref]];
-    
-    ///方法二：自己写多线程
-    //    [self imageWithUrl:model.imageHref indexpath:indexPath];
-//        [self.queue addOperationWithBlock: ^{
-//            NSData *imgData = [NSData dataWithContentsOfURL:[NSURL URLWithString:model.imageHref]]; //得到图像数据
-//            UIImage *image = [UIImage imageWithData:imgData];
-//            [[NSOperationQueue mainQueue] addOperationWithBlock: ^{
-//                cell.imageV.image = image;
-//                [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
-//            }];
-//        }];
+    cell.url = model.imageHref;
     return cell;
 }
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    MM_ListModel *model = self.dataArr[indexPath.row];
+    return model.height;
+    
+}
 
-
-/**
- lazy
-
- @return <#return value description#>
- */
 -(NSMutableArray *)dataArr{
     if(!_dataArr){
         _dataArr = [[NSMutableArray alloc]init];
@@ -104,5 +122,16 @@
 - (NSOperationQueue *)queue {
     if (!_queue) _queue = [[NSOperationQueue alloc] init];
     return _queue;
+}
+
+
+-(CGRect)heightForText:(NSString *)text FontSize:(CGFloat)fontSize{
+    CGSize size = CGSizeMake([UIScreen mainScreen].bounds.size.width-20-40-80, MAXFLOAT);
+     NSMutableDictionary *attrs = [NSMutableDictionary dictionary];
+    attrs[NSFontAttributeName] = [UIFont systemFontOfSize:fontSize];
+    CGRect result = [text boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin attributes:attrs context:nil];
+    
+    return result;
+    
 }
 @end

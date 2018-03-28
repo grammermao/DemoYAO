@@ -7,10 +7,19 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "MM_ListModel.h"
+
+
 
 @interface MM_ListTableViewCell : UITableViewCell
 @property (weak, nonatomic) IBOutlet UILabel *title;
 @property (weak, nonatomic) IBOutlet UILabel *titleDesc;
-@property (weak, nonatomic) IBOutlet UIImageView *imageV;
+
+
+@property (weak, nonatomic) IBOutlet UIView *imageV;
+
+@property(nonatomic ,strong) MM_ListModel *model;
+@property(nonatomic,strong) NSString *url;
+@property(nonatomic,strong) NSIndexPath *index;
 
 @end

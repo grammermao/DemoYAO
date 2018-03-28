@@ -17,5 +17,7 @@
 /// 标题
 @property (copy, nonatomic) NSString *title;
 
+@property (nonatomic ,assign) CGFloat height;
+
 -(instancetype)initWithDictionry:(NSDictionary*)dict;
 @end
